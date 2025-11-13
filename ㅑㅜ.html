@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>이차함수 시각화 (y = ax^2 + bx + c)</title>
+  <style>
+    :root { --bg:#0b0f14; --panel:#111923; --ink:#e7eef7; --sub:#9db0c9; --accent:#5bb2ff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:16px 20px; border-bottom:1px solid #1c2633; background:linear-gradient(180deg,#0f1520,#0c121a); position: sticky; top: 0; z-index: 10; }
+    h1 { margin:0; font-size:20px; font-weight:700; letter-spacing:0.2px; }
+    main { display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px; }
+    @media (max-width: 980px){ main{ grid-template-columns: 1fr; } }
+    .card { background:var(--panel); border:1px solid #1c2633; border-radius:16px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+    .controls { padding:16px; display:grid; gap:14px; }
+    .mode-toggle { display:flex; gap:8px; align-items:center; margin-bottom:4px; }
+    .mode-toggle span { font-size:13px; color:var(--sub); }
+    .mode-btn { padding:6px 8px; border-radius:999px; border:1px solid #2a3a4f; background:#0e1723; color:var(--ink); font-size:11px; cursor:pointer; }
+    .mode-btn.active { border-color:var(--accent); box-shadow:0 0 0 1px rgba(91,178,255,.4); }
+    .row { display:grid; grid-template-columns: 1fr 56px; align-items:center; gap:8px; }
+    .row label { display:block; font-size:13px; color:var(--sub); margin-bottom:6px; }
+    input[type=range] { width:100%; accent-color: var(--accent); }
+    input[type=number]{ width:100%; padding:8px 10px; border-radius:10px; border:1px solid #2a3a4f; background:#0e1723; color:var(--ink); }
+    button { background:#0e1723; color:var(--ink); border:1px solid #2a3a4f; padding:8px 10px; border-radius:10px; cursor:pointer; }
+    button:hover{ border-color:#3a4f6a; }
+
+    .viz { position:relative; padding:16px; }
+    canvas { width:100%; height:520px; display:block; border-radius:16px; background:#0c121a; border:1px solid #1c2633; }
+
+    .info { padding:12px 16px 18px 16px; border-top:1px solid #1c2633; display:grid; gap:8px; }
+    .eq { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace; background:#0e1723; border:1px solid #2a3a4f; border-radius:12px; padding:10px 12px; white-space: pre-line; }
+    .hint{ color:var(--sub); font-size:13px; }
+
+    .qa { padding:8px 0 0 0; border-top:1px dashed #1f2b3a; margin-top:4px; display:grid; gap:6px; }
+    .qa label { font-size:13px; color:var(--sub); }
+    .qa-row { display:grid; grid-template-columns: 1fr auto; gap:8px; }
+    .qa-row input[type=text]{ padding:8px 10px; border-radius:10px; border:1px solid #2a3a4f; background:#0e1723; color:var(--ink); }
+    .qa-answer { font-size:13px; color:var(--sub); min-height:32px; }
+
+    .vertex-row { }
+    .abc-row { }
+    body.standard-mode .vertex-row { display:none; }
+    body.vertex-mode .vertex-row { display:grid; }
+    body.vertex-mode .abc-row { display:none; }
+  </style>
+</head>
+<body class="standard-mode">
+  <header>
+    <h1>이차함수 그래프 시각화: y = ax² + bx + c</h1>
+  </header>
+  <main>
+    <section class="card">
+      <div class="controls">
+        <div class="mode-toggle">
+          <span>형태</span>
+          <button id="modeStandard" class="mode-btn active">일반형 y = ax² + bx + c</button>
+          <button id="modeVertex" class="mode-btn">꼭짓점형 y = a(x - p)² + q</button>
+        </div>
+        <div class="row abc-row">
+          <div>
+            <label for="a">계수 a (그래프의 모양, -3 ≤ a ≤ 3)</label>
+            <input id="a" type="range" min="-3" max="3" step="0.1" value="1" />
+          </div>
+          <input id="aNum" type="number" step="0.1" value="1" />
+        </div>
+        <div class="row abc-row">
+          <div>
+            <label for="b">계수 b (대칭축의 위치, -10 ≤ b ≤ 10)</label>
+            <input id="b" type="range" min="-10" max="10" step="0.1" value="0" />
+          </div>
+          <input id="bNum" type="number" step="0.1" value="0" />
+        </div>
+        <div class="row abc-row">
+          <div>
+            <label for="c">계수 c (y절편, -10 ≤ c ≤ 10)</label>
+            <input id="c" type="range" min="-10" max="10" step="0.1" value="0" />
+          </div>
+          <input id="cNum" type="number" step="0.1" value="0" />
+        </div>
+
+        <div class="row vertex-row">
+          <div>
+            <label for="aV">계수 a (그래프의 모양, -3 ≤ a ≤ 3)</label>
+            <input id="aV" type="range" min="-3" max="3" step="0.1" value="1" />
+          </div>
+          <input id="aVNum" type="number" step="0.1" value="1" />
+        </div>
+        <div class="row vertex-row">
+          <div>
+            <label for="p">꼭짓점 p (꼭짓점의 x좌표, -10 ≤ p ≤ 10)</label>
+            <input id="p" type="range" min="-10" max="10" step="0.1" value="0" />
+          </div>
+          <input id="pNum" type="number" step="0.1" value="0" />
+        </div>
+        <div class="row vertex-row">
+          <div>
+            <label for="q">꼭짓점 q (꼭짓점의 y좌표·최댓값/최솟값, -10 ≤ q ≤ 10)</label>
+            <input id="q" type="range" min="-10" max="10" step="0.1" value="0" />
+          </div>
+          <input id="qNum" type="number" step="0.1" value="0" />
+        </div>
+
+        <div class="qa">
+          <label for="qaInput">그래프 개념 Q&A</label>
+          <div class="qa-row">
+            <input id="qaInput" type="text" placeholder="이차함수 그래프에 대해 물어보세요." autocomplete="off" />
+            <button id="qaBtn">질문하기</button>
+          </div>
+          <div id="qaAnswer" class="qa-answer"></div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="eq" id="eqStd">y = 1·x² + 0·x + 0</div>
+        <div class="eq" id="eqVertex">y = 1·(x - 0)² + 0  (꼭짓점 V(0, 0), 대칭축 x = 0)</div>
+        <div class="hint">
+          <strong>수업 포인트</strong>
+          <ul style="margin:6px 0 0 16px; padding:0; list-style:disc;">
+            <li>a의 부호: 위로/아래로 굽는 방향</li>
+            <li>|a|의 크기: 그래프의 가파름(폭)</li>
+            <li>b: 대칭축 x = -b/(2a)의 위치</li>
+            <li>c: y절편 (x = 0일 때의 함수값)</li>
+            <li>p, q: 꼭짓점의 좌표 및 최댓값/최솟값</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card viz">
+      <canvas id="plot" width="900" height="520" aria-label="이차함수 그래프"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const a = document.getElementById('a');
+    const b = document.getElementById('b');
+    const c = document.getElementById('c');
+    const aNum = document.getElementById('aNum');
+    const bNum = document.getElementById('bNum');
+    const cNum = document.getElementById('cNum');
+
+    const aV = document.getElementById('aV');
+    const p = document.getElementById('p');
+    const q = document.getElementById('q');
+    const aVNum = document.getElementById('aVNum');
+    const pNum = document.getElementById('pNum');
+    const qNum = document.getElementById('qNum');
+
+    const eqStd = document.getElementById('eqStd');
+    const eqVertex = document.getElementById('eqVertex');
+    const canvas = document.getElementById('plot');
+    const ctx = canvas.getContext('2d');
+
+    const modeStandardBtn = document.getElementById('modeStandard');
+    const modeVertexBtn = document.getElementById('modeVertex');
+
+    const qaInput = document.getElementById('qaInput');
+    const qaBtn = document.getElementById('qaBtn');
+    const qaAnswer = document.getElementById('qaAnswer');
+
+    const qaDefault = '계수 a, b, c와 그래프의 모양, 대칭축, 꼭짓점, 최댓값·최솟값에 대한 질문에 답하도록 구성되어 있습니다.';
+    qaAnswer.textContent = qaDefault;
+
+    // 항상 축/격자, 대칭축/꼭짓점을 표시하는 모드로 고정
+    const showAxis = true;
+    const showGrid = true;
+    let mode = 'standard';
+
+    // 좌표계 설정
+    const xMin = -10, xMax = 10;
+    const yMin = -10, yMax = 10;
+
+    function xToPx(x){
+      return (x - xMin) / (xMax - xMin) * canvas.width;
+    }
+    function yToPx(y){
+      return canvas.height - (y - yMin) / (yMax - yMin) * canvas.height;
+    }
+
+    function clear(){
+      ctx.fillStyle = '#0c121a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawGrid(){
+      if(!showGrid) return;
+      ctx.save();
+      ctx.strokeStyle = '#162335';
+      ctx.lineWidth = 1;
+
+      for(let xi = Math.ceil(xMin); xi <= xMax; xi++){
+        const px = xToPx(xi);
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, canvas.height);
+        ctx.stroke();
+      }
+      for(let yi = Math.ceil(yMin); yi <= yMax; yi++){
+        const py = yToPx(yi);
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(canvas.width, py);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#2a3a4f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, yToPx(0));
+      ctx.lineTo(canvas.width, yToPx(0));
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(xToPx(0), 0);
+      ctx.lineTo(xToPx(0), canvas.height);
+      ctx.stroke();
+
+      ctx.fillStyle = '#9db0c9';
+      ctx.font = '12px ui-monospace, monospace';
+      for(let xi = Math.ceil(xMin); xi <= xMax; xi++){
+        const px = xToPx(xi);
+        ctx.fillText(String(xi), px + 2, yToPx(0) - 4);
+      }
+      for(let yi = Math.ceil(yMin); yi <= yMax; yi++){
+        const py = yToPx(yi);
+        if(yi === 0) continue;
+        ctx.fillText(String(yi), xToPx(0) + 4, py - 2);
+      }
+      ctx.restore();
+    }
+
+    function drawParabola(aVal, bVal, cVal){
+      ctx.save();
+      ctx.strokeStyle = '#5bb2ff';
+      ctx.lineWidth = 2.5;
+
+      const step = (xMax - xMin) / 900;
+      let first = true;
+      ctx.beginPath();
+      for(let x = xMin; x <= xMax; x += step){
+        const y = aVal*x*x + bVal*x + cVal;
+        const px = xToPx(x);
+        const py = yToPx(y);
+        if(first){
+          ctx.moveTo(px, py);
+          first = false;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+
+      if(showAxis && Math.abs(aVal) > 1e-9){
+        const pVal = -bVal/(2*aVal);
+        const qVal = aVal*pVal*pVal + bVal*pVal + cVal;
+        ctx.strokeStyle = '#3a7f7f';
+        ctx.setLineDash([6,4]);
+        ctx.beginPath();
+        ctx.moveTo(xToPx(pVal), 0);
+        ctx.lineTo(xToPx(pVal), canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#3a7f7f';
+        ctx.beginPath();
+        ctx.arc(xToPx(pVal), yToPx(qVal), 5, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function format(n){
+      return Number(n.toFixed(2)).toString();
+    }
+
+    // 간단 테스트 (format 동작 확인)
+    console.assert(format(1.234) === '1.23', 'format(1.234)는 "1.23"이어야 합니다.');
+    console.assert(format(-0.005) === '0', 'format(-0.005)는 "0"이어야 합니다.');
+
+    function updateEquations(aVal, bVal, cVal){
+      eqStd.textContent = `y = ${format(aVal)}·x² + ${format(bVal)}·x + ${format(cVal)}`;
+      if(Math.abs(aVal) < 1e-9){
+        eqVertex.textContent = `a = 0이면 이차함수가 아니라 직선 y = ${format(bVal)}·x + ${format(cVal)} 이 됩니다.`;
+        return;
+      }
+      const pVal = -bVal/(2*aVal);
+      const qVal = aVal*pVal*pVal + bVal*pVal + cVal;
+      eqVertex.textContent = `꼭짓점형: y = ${format(aVal)}·(x - ${format(pVal)})² + ${format(qVal)}
+꼭짓점 V(${format(pVal)}, ${format(qVal)}), 대칭축 x = ${format(pVal)}`;
+    }
+
+    function render(){
+      const aVal = parseFloat(a.value);
+      const bVal = parseFloat(b.value);
+      const cVal = parseFloat(c.value);
+      clear();
+      drawGrid();
+      drawParabola(aVal, bVal, cVal);
+      updateEquations(aVal, bVal, cVal);
+    }
+
+    function syncInputs(){
+      aNum.value = a.value;
+      bNum.value = b.value;
+      cNum.value = c.value;
+    }
+
+    function syncSliders(){
+      a.value = aNum.value;
+      b.value = bNum.value;
+      c.value = cNum.value;
+      render();
+    }
+
+    function syncVertexInputs(){
+      aVNum.value = aV.value;
+      pNum.value = p.value;
+      qNum.value = q.value;
+    }
+
+    function syncVertexSliders(){
+      aV.value = aVNum.value;
+      p.value = pNum.value;
+      q.value = qNum.value;
+      updateFromVertex();
+    }
+
+    function updateVertexFromStandard(){
+      const aVal = parseFloat(a.value);
+      const bVal = parseFloat(b.value);
+      const cVal = parseFloat(c.value);
+      if(Math.abs(aVal) < 1e-9){
+        aV.value = 0;
+        p.value = 0;
+        q.value = cVal;
+      } else {
+        const pVal = -bVal/(2*aVal);
+        const qVal = aVal*pVal*pVal + bVal*pVal + cVal;
+        aV.value = aVal;
+        p.value = pVal;
+        q.value = qVal;
+      }
+      syncVertexInputs();
+    }
+
+    function updateFromVertex(){
+      const aVal = parseFloat(aV.value);
+      const pVal = parseFloat(p.value);
+      const qVal = parseFloat(q.value);
+      const bVal = -2 * aVal * pVal;
+      const cVal = aVal * pVal * pVal + qVal;
+      a.value = aVal;
+      b.value = bVal;
+      c.value = cVal;
+      syncInputs();
+      render();
+    }
+
+    // 계수 입력(슬라이더) 이벤트
+    [a, b, c].forEach(el => {
+      el.addEventListener('input', () => {
+        if(mode === 'standard'){
+          syncInputs();
+          render();
+        } else {
+          syncInputs();
+          updateVertexFromStandard();
+          render();
+        }
+      });
+    });
+
+    // 계수 숫자 입력 이벤트
+    [aNum, bNum, cNum].forEach(el => {
+      el.addEventListener('change', () => {
+        syncSliders();
+        if(mode === 'vertex'){
+          updateVertexFromStandard();
+        }
+      });
+    });
+
+    // 꼭짓점형 슬라이더 이벤트
+    [aV, p, q].forEach(el => {
+      el.addEventListener('input', () => {
+        if(mode === 'vertex'){
+          syncVertexInputs();
+          updateFromVertex();
+        }
+      });
+    });
+
+    // 꼭짓점형 숫자 입력 이벤트
+    [aVNum, pNum, qNum].forEach(el => {
+      el.addEventListener('change', () => {
+        if(mode === 'vertex'){
+          syncVertexSliders();
+        }
+      });
+    });
+
+    // 모드 전환 버튼
+    modeStandardBtn.addEventListener('click', () => {
+      mode = 'standard';
+      document.body.classList.add('standard-mode');
+      document.body.classList.remove('vertex-mode');
+      modeStandardBtn.classList.add('active');
+      modeVertexBtn.classList.remove('active');
+      render();
+    });
+
+    modeVertexBtn.addEventListener('click', () => {
+      mode = 'vertex';
+      document.body.classList.remove('standard-mode');
+      document.body.classList.add('vertex-mode');
+      modeVertexBtn.classList.add('active');
+      modeStandardBtn.classList.remove('active');
+      updateVertexFromStandard();
+      render();
+    });
+
+    // Q&A 기능 (간략 버전)
+    function answerQuestion(text){
+      const qText = text.trim().toLowerCase();
+      if(!qText){
+        qaAnswer.textContent = qaDefault;
+        return;
+      }
+      let ans = '';
+
+      // 계수 a 관련 (핵심만)
+      if(qText.includes('a가') && (qText.includes('커지') || qText.includes('크면'))){
+        ans = '계수 a의 절댓값이 커지면 포물선이 더 가팔라지고 폭이 좁아집니다.';
+      } else if(qText.includes('a가') && (qText.includes('작아지') || qText.includes('0에 가까'))){
+        ans = '계수 a의 절댓값이 0에 가까워질수록 포물선이 완만해져 직선에 가까워집니다.';
+      } else if((qText.includes('a가') && qText.includes('0')) || qText.includes('a=0')){
+        ans = 'a = 0이면 이차항이 사라져서 y = bx + c인 직선이 됩니다. 이때는 이차함수가 아닙니다.';
+      } else if(qText.includes('a가') && qText.includes('양수')){
+        ans = 'a가 양수이면 이차함수의 그래프는 위로 볼록인 포물선입니다.';
+      } else if(qText.includes('a가') && qText.includes('음수')){
+        ans = 'a가 음수이면 이차함수의 그래프는 아래로 볼록인 포물선입니다.';
+
+      // 계수 b, c 관련 (핵심)
+      } else if(qText.includes('b가') && (qText.includes('커지') || qText.includes('변하') || qText.includes('바뀌'))){
+        ans = 'b가 변하면 대칭축 x = -b/(2a)의 위치가 바뀝니다.';
+      } else if((qText.includes('c가') || qText.includes('c의')) && (qText.includes('커지') || qText.includes('변하') || qText.includes('바뀌') || qText.includes('변화'))){
+        ans = 'c는 y절편이므로 c가 커지면 그래프 전체가 위로, c가 작아지면 아래로 평행이동합니다.';
+      } else if(qText.includes('계수') || qText.includes('a, b, c') || qText.includes('abc')){
+        ans = 'y = ax² + bx + c에서 a는 그래프의 모양과 가파름, b는 대칭축의 위치, c는 y절편을 나타냅니다.';
+
+      // 형태·필수 개념
+      } else if(qText.includes('대칭축')){
+        ans = '일반형 y = ax² + bx + c에서 대칭축은 x = -b/(2a)입니다.';
+      } else if(qText.includes('꼭짓점')){
+        ans = '이차함수의 꼭짓점은 그래프에서 최대값 또는 최소값을 갖는 점입니다.';
+      } else if(qText.includes('최대') || qText.includes('최댓값') || qText.includes('최솟값') || qText.includes('최소값')){
+        ans = 'a가 양수이면 꼭짓점에서 최솟값을, a가 음수이면 꼭짓점에서 최댓값을 가집니다.';
+
+      // 기타
+      } else {
+        ans = qaDefault;
+      }
+
+      qaAnswer.textContent = ans;
+    }
+
+    qaBtn.addEventListener('click', () => {
+      answerQuestion(qaInput.value);
+    });
+
+    qaInput.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        answerQuestion(qaInput.value);
+      }
+    });
+
+    // 초기 상태 동기화 및 렌더링
+    syncInputs();
+    updateVertexFromStandard();
+    render();
+  </script>
+</body>
+</html>
